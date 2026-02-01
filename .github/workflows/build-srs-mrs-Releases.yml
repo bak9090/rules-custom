@@ -1,0 +1,254 @@
+name: Build ruleset from local json
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 19 * * *"
+  push:
+    branches:
+      - master
+    paths:
+      - "rules/*.json"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set variables
+        run: |
+          echo "update_version=$(date -d '+8 hours' +%Y-%m-%d)" >> ${GITHUB_ENV}
+        shell: bash
+
+      - name: Clone Repository
+        uses: actions/checkout@v6
+
+      - name: Setup Tools
+        run: |
+          mkdir -p ./tools/
+          
+          # 下载 sing-box 兼容版本（用于生成 v3 版 srs）
+          echo "📦 Downloading sing-box-release..."
+          curl -L "https://github.com/DustinWin/proxy-tools/releases/download/sing-box/sing-box-ref1nd-main-linux-amd64v3.tar.gz" | tar -zx -C ./tools/
+          if [ -f "./tools/CrashCore" ]; then
+            mv -f ./tools/CrashCore ./tools/sing-box-v3
+            chmod +x ./tools/sing-box-v3
+            echo "✅ sing-box-v3 ready"
+          else
+            echo "❌ Error: Could not find sing-box-v3 binary (CrashCore)!"
+            exit 1
+          fi
+          
+          # 下载 sing-box 开发版本（用于生成 v4 版 srs）
+          echo "📦 Downloading sing-box-dev..."
+          curl -L "https://github.com/DustinWin/proxy-tools/releases/download/sing-box/sing-box-ref1nd-dev-linux-amd64v3.tar.gz" | tar -zx -C ./tools/
+          if [ -f "./tools/CrashCore" ]; then
+            mv -f ./tools/CrashCore ./tools/sing-box-v4
+            chmod +x ./tools/sing-box-v4
+            echo "✅ sing-box-v4 ready"
+          else
+            echo "❌ Error: Could not find sing-box-v4 binary (CrashCore)!"
+            exit 1
+          fi
+          
+          # 下载 mihomo（用于生成 mrs）
+          echo "📦 Downloading mihomo..."
+          curl -L "https://github.com/DustinWin/proxy-tools/releases/download/mihomo/mihomo-meta-linux-amd64v3.tar.gz" | tar -zx -C ./tools/
+          if [ -f "./tools/CrashCore" ]; then
+            mv -f ./tools/CrashCore ./tools/mihomo
+            chmod +x ./tools/mihomo
+            echo "✅ mihomo ready"
+          else
+            echo "❌ Error: Could not find mihomo binary (CrashCore)!"
+            exit 1
+          fi
+          
+          echo "📂 Tools directory:"
+          ls -la ./tools/
+
+      - name: Generate sing-box srs v3 (compatible version)
+        run: |
+          mkdir -p ./sing-box-ruleset-v3/
+          for json_file in ./rules/*.json; do
+            if [ -f "$json_file" ]; then
+              filename=$(basename "$json_file" .json)
+              echo "Processing: ${filename}"
+              jq '.version = 3' "$json_file" > "./sing-box-ruleset-v3/${filename}.json"
+              ./tools/sing-box-v3 rule-set compile "./sing-box-ruleset-v3/${filename}.json" -o "./sing-box-ruleset-v3/${filename}.srs"
+              echo "✅ [v3] ${filename}.srs"
+            fi
+          done
+          echo "Generated v3 files:"
+          ls -la ./sing-box-ruleset-v3/
+
+      - name: Generate sing-box srs v4 (latest version)
+        run: |
+          mkdir -p ./sing-box-ruleset-v4/
+          for json_file in ./rules/*.json; do
+            if [ -f "$json_file" ]; then
+              filename=$(basename "$json_file" .json)
+              echo "Processing: ${filename}"
+              jq '.version = 4' "$json_file" > "./sing-box-ruleset-v4/${filename}.json"
+              ./tools/sing-box-v4 rule-set compile "./sing-box-ruleset-v4/${filename}.json" -o "./sing-box-ruleset-v4/${filename}.srs"
+              echo "✅ [v4] ${filename}.srs"
+            fi
+          done
+          echo "Generated v4 files:"
+          ls -la ./sing-box-ruleset-v4/
+
+      - name: Generate mihomo mrs
+        run: |
+          mkdir -p ./mihomo-ruleset/
+          
+          for json_file in ./rules/*.json; do
+            if [ -f "$json_file" ]; then
+              filename=$(basename "$json_file" .json)
+              echo "Processing: ${filename}"
+              
+              temp_yaml="temp_${filename}.yaml"
+              echo "payload:" > "$temp_yaml"
+              
+              # 检查是否包含 IP 规则
+              has_ip=$(jq -r '.rules[]?.ip_cidr[]? // empty' "$json_file" 2>/dev/null | head -1)
+              
+              if [ -n "$has_ip" ]; then
+                # IP 规则 - 使用进程替换避免子 shell 问题
+                while IFS= read -r line; do
+                  [[ -n "$line" ]] && echo "  - '$line'" >> "$temp_yaml"
+                done < <(jq -r '.rules[].ip_cidr[]? // empty' "$json_file")
+                
+                while IFS= read -r line; do
+                  [[ -n "$line" ]] && echo "  - '$line'" >> "$temp_yaml"
+                done < <(jq -r '.rules[].ip_cidr6[]? // empty' "$json_file")
+                
+                if [ $(wc -l < "$temp_yaml") -gt 1 ]; then
+                  ./tools/mihomo convert-ruleset ipcidr yaml "$temp_yaml" "./mihomo-ruleset/${filename}.mrs"
+                  echo "✅ [MRS-IP] ${filename}.mrs"
+                fi
+              else
+                # 域名规则 - 使用进程替换避免子 shell 问题
+                while IFS= read -r line; do
+                  [[ -n "$line" ]] && echo "  - '+.$line'" >> "$temp_yaml"
+                done < <(jq -r '.rules[].domain_suffix[]? // empty' "$json_file")
+                
+                while IFS= read -r line; do
+                  [[ -n "$line" ]] && echo "  - '$line'" >> "$temp_yaml"
+                done < <(jq -r '.rules[].domain[]? // empty' "$json_file")
+                
+                while IFS= read -r line; do
+                  [[ -n "$line" ]] && echo "  - 'DOMAIN-KEYWORD,$line'" >> "$temp_yaml"
+                done < <(jq -r '.rules[].domain_keyword[]? // empty' "$json_file")
+                
+                while IFS= read -r line; do
+                  [[ -n "$line" ]] && echo "  - 'DOMAIN-REGEX,$line'" >> "$temp_yaml"
+                done < <(jq -r '.rules[].domain_regex[]? // empty' "$json_file")
+                
+                if [ $(wc -l < "$temp_yaml") -gt 1 ]; then
+                  ./tools/mihomo convert-ruleset domain yaml "$temp_yaml" "./mihomo-ruleset/${filename}.mrs"
+                  echo "✅ [MRS-Domain] ${filename}.mrs"
+                else
+                  echo "⚠️ [MRS] Skipped empty ruleset: ${filename}"
+                fi
+              fi
+              
+              rm -f "$temp_yaml"
+            fi
+          done
+          
+          echo "Generated mrs files:"
+          ls -la ./mihomo-ruleset/
+
+      - name: Release and upload `sing-box-ruleset-v3` assets
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          release_name: sing-box-ruleset-compatible
+          tag: sing-box-ruleset-compatible
+          overwrite: true
+          body: |
+            [sing-box 内核](https://github.com/SagerNet/sing-box) rule_set 规则集文件
+            适用于 v1.11.0 - v1.13.0（不包含）系列版本的 sing-box 内核（`"version": 3`）
+            规则集文件更新于 ${{ env.update_version }}
+          file_glob: true
+          file: ./sing-box-ruleset-v3/*
+
+      - name: Commit and push `sing-box-ruleset-compatible` branch
+        run: |
+          cd ./sing-box-ruleset-v3/ || exit 1
+          git init
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git checkout -b sing-box-ruleset-compatible
+          git add . && git commit -m "sing-box 内核 rule_set 规则集文件更新于 ${update_version}"
+          git remote add origin "https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}"
+          git push -f origin sing-box-ruleset-compatible
+
+      - name: Release and upload `sing-box-ruleset` assets
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          release_name: sing-box-ruleset
+          tag: sing-box-ruleset
+          overwrite: true
+          body: |
+            [sing-box 内核](https://github.com/SagerNet/sing-box) rule_set 规则集文件
+            适用于 v1.13.0+ 系列版本的 sing-box 内核（`"version": 4`）
+            规则集文件更新于 ${{ env.update_version }}
+          file_glob: true
+          file: ./sing-box-ruleset-v4/*
+
+      - name: Commit and push `sing-box-ruleset` branch
+        run: |
+          cd ./sing-box-ruleset-v4/ || exit 1
+          git init
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git checkout -b sing-box-ruleset
+          git add . && git commit -m "sing-box 内核 rule_set 规则集文件更新于 ${update_version}"
+          git remote add origin "https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}"
+          git push -f origin sing-box-ruleset
+
+      - name: Release and upload `mihomo-ruleset` assets
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          release_name: mihomo-ruleset
+          tag: mihomo-ruleset
+          overwrite: true
+          body: |
+            [mihomo 内核](https://github.com/MetaCubeX/mihomo) rule-set 规则集文件
+            规则集文件更新于 ${{ env.update_version }}
+          file_glob: true
+          file: ./mihomo-ruleset/*
+
+      - name: Commit and push `mihomo-ruleset` branch
+        run: |
+          cd ./mihomo-ruleset/ || exit 1
+          git init
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git checkout -b mihomo-ruleset
+          git add . && git commit -m "mihomo 内核 rule-set 规则集文件更新于 ${update_version}"
+          git remote add origin "https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}"
+          git push -f origin mihomo-ruleset
+
+      - name: Purge jsDelivr CDN
+        run: |
+          cd ./sing-box-ruleset-v3/ || exit 1
+          for file in $(ls); do
+            curl -i "https://purge.jsdelivr.net/gh/${{ github.repository }}@sing-box-ruleset-compatible/${file}"
+          done
+          cd ../sing-box-ruleset-v4/ || exit 1
+          for file in $(ls); do
+            curl -i "https://purge.jsdelivr.net/gh/${{ github.repository }}@sing-box-ruleset/${file}"
+          done
+          cd ../mihomo-ruleset/ || exit 1
+          for file in $(ls); do
+            curl -i "https://purge.jsdelivr.net/gh/${{ github.repository }}@mihomo-ruleset/${file}"
+          done
+
+      - name: Delete old workflow runs
+        uses: Mattraks/delete-workflow-runs@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          retain_days: 3
+          keep_minimum_runs: 1

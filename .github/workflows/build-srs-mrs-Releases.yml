@@ -1,8 +1,6 @@
 name: Build ruleset from local json
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "0 19 * * *"
   push:
     branches:
       - master

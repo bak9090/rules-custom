@@ -1,0 +1,36 @@
+{
+  "version": 3,
+  "rules": [
+    {
+      "domain_suffix": [
+        "t.co",
+        "twimg.co",
+        "twimg.com",
+        "twimg.org",
+        "twitter.com",
+        "x.com",
+        "grok.com",
+        "x.ai",
+        "lmarena.ai",
+        "arena.ai",
+        "ghcr.io",
+        "github.io",
+        "github.com",
+        "githubstatus.com",
+        "githubassets.com",
+        "githubusercontent.com",
+        "githubapp.com",
+        "github.blog",
+        "github-api.arkoselabs.com",
+        "github-cloud.s3.amazonaws.com",
+        "githubcopilot.com",
+        "copilot.microsoft.com",
+        "a-msedge.net",
+        "copilot.cloud.microsoft",
+        "sydney.bing.com",
+        "ai.azure.com",
+        "cloudflare.com"
+      ]
+    }
+  ]
+}

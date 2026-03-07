@@ -23,8 +23,8 @@ jobs:
         run: |
           mkdir -p ./tools/
           
-          # 下载 sing-box 兼容版本（用于生成 v3 版 srs）
-          echo "📦 Downloading sing-box-release..."
+          # 下载 sing-box stable版本（用于生成 v3 版 srs）
+          echo "📦 Downloading sing-box-stable..."
           curl -L "https://github.com/DustinWin/proxy-tools/releases/download/sing-box/sing-box-ref1nd-stable-linux-amd64-v3.tar.gz" | tar -zx -C ./tools/
           if [ -f "./tools/CrashCore" ]; then
             mv -f ./tools/CrashCore ./tools/sing-box-v3
@@ -35,8 +35,8 @@ jobs:
             exit 1
           fi
           
-          # 下载 sing-box 开发版本（用于生成 v4 版 srs）
-          echo "📦 Downloading sing-box-dev..."
+          # 下载 sing-box test版本（用于生成 v4 版 srs）
+          echo "📦 Downloading sing-box-test..."
           curl -L "https://github.com/DustinWin/proxy-tools/releases/download/sing-box/sing-box-ref1nd-test-linux-amd64-v3.tar.gz" | tar -zx -C ./tools/
           if [ -f "./tools/CrashCore" ]; then
             mv -f ./tools/CrashCore ./tools/sing-box-v4

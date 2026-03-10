@@ -63,7 +63,7 @@ jobs:
         run: |
           mkdir -p ./sing-box-ruleset-v3/
           for json_file in ./rules/*.json; do
-            if[ -f "$json_file" ]; then
+            if [ -f "$json_file" ]; then
               filename=$(basename "$json_file" .json)
               echo "Processing: ${filename}"
               jq '.version = 3' "$json_file" > "./sing-box-ruleset-v3/${filename}.json"

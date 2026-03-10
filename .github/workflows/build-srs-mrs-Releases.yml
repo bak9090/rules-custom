@@ -25,37 +25,34 @@ jobs:
           
           # 下载 sing-box stable版本（用于生成 v3 版 srs）
           echo "📦 Downloading sing-box-stable..."
-          curl -L "https://github.com/DustinWin/proxy-tools/releases/download/sing-box/sing-box-ref1nd-stable-linux-amd64-v3.tar.gz" | tar -zx -C ./tools/
-          if [ -f "./tools/CrashCore" ]; then
-            mv -f ./tools/CrashCore ./tools/sing-box-v3
+          curl -o ./tools/sing-box-v3 -L "https://github.com/DustinWin/proxy-tools/releases/download/sing-box/sing-box-ref1nd-stable-linux-amd64-v3.upx"
+          if [ -f "./tools/sing-box-v3" ]; then
             chmod +x ./tools/sing-box-v3
             echo "✅ sing-box-v3 ready"
           else
-            echo "❌ Error: Could not find sing-box-v3 binary (CrashCore)!"
+            echo "❌ Error: Could not find sing-box-v3 binary!"
             exit 1
           fi
           
           # 下载 sing-box test版本（用于生成 v4 版 srs）
           echo "📦 Downloading sing-box-test..."
-          curl -L "https://github.com/DustinWin/proxy-tools/releases/download/sing-box/sing-box-ref1nd-test-linux-amd64-v3.tar.gz" | tar -zx -C ./tools/
-          if [ -f "./tools/CrashCore" ]; then
-            mv -f ./tools/CrashCore ./tools/sing-box-v4
+          curl -o ./tools/sing-box-v4 -L "https://github.com/DustinWin/proxy-tools/releases/download/sing-box/sing-box-ref1nd-test-linux-amd64-v3.upx"
+          if [ -f "./tools/sing-box-v4" ]; then
             chmod +x ./tools/sing-box-v4
             echo "✅ sing-box-v4 ready"
           else
-            echo "❌ Error: Could not find sing-box-v4 binary (CrashCore)!"
+            echo "❌ Error: Could not find sing-box-v4 binary!"
             exit 1
           fi
           
           # 下载 mihomo（用于生成 mrs）
           echo "📦 Downloading mihomo..."
-          curl -L "https://github.com/DustinWin/proxy-tools/releases/download/mihomo/mihomo-meta-linux-amd64-v3.tar.gz" | tar -zx -C ./tools/
-          if [ -f "./tools/CrashCore" ]; then
-            mv -f ./tools/CrashCore ./tools/mihomo
+          curl -o ./tools/mihomo -L "https://github.com/DustinWin/proxy-tools/releases/download/mihomo/mihomo-meta-linux-amd64-v3.upx"
+          if [ -f "./tools/mihomo" ]; then
             chmod +x ./tools/mihomo
             echo "✅ mihomo ready"
           else
-            echo "❌ Error: Could not find mihomo binary (CrashCore)!"
+            echo "❌ Error: Could not find mihomo binary!"
             exit 1
           fi
           
@@ -66,7 +63,7 @@ jobs:
         run: |
           mkdir -p ./sing-box-ruleset-v3/
           for json_file in ./rules/*.json; do
-            if [ -f "$json_file" ]; then
+            if[ -f "$json_file" ]; then
               filename=$(basename "$json_file" .json)
               echo "Processing: ${filename}"
               jq '.version = 3' "$json_file" > "./sing-box-ruleset-v3/${filename}.json"
@@ -97,7 +94,7 @@ jobs:
           mkdir -p ./mihomo-ruleset/
           
           for json_file in ./rules/*.json; do
-            if [ -f "$json_file" ]; then
+            if[ -f "$json_file" ]; then
               filename=$(basename "$json_file" .json)
               echo "Processing: ${filename}"
               
@@ -117,7 +114,7 @@ jobs:
                   [[ -n "$line" ]] && echo "  - '$line'" >> "$temp_yaml"
                 done < <(jq -r '.rules[].ip_cidr6[]? // empty' "$json_file")
                 
-                if [ $(wc -l < "$temp_yaml") -gt 1 ]; then
+                if[ $(wc -l < "$temp_yaml") -gt 1 ]; then
                   ./tools/mihomo convert-ruleset ipcidr yaml "$temp_yaml" "./mihomo-ruleset/${filename}.mrs"
                   echo "✅ [MRS-IP] ${filename}.mrs"
                 fi

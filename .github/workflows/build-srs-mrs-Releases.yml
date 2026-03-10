@@ -22,7 +22,7 @@ jobs:
       - name: Setup Tools
         run: |
           mkdir -p ./tools/
-          
+
           # 下载 sing-box stable版本（用于生成 v3 版 srs）
           echo "📦 Downloading sing-box-stable..."
           curl -o ./tools/sing-box-v3 -L "https://github.com/DustinWin/proxy-tools/releases/download/sing-box/sing-box-ref1nd-stable-linux-amd64-v3.upx"
@@ -30,21 +30,21 @@ jobs:
             chmod +x ./tools/sing-box-v3
             echo "✅ sing-box-v3 ready"
           else
-            echo "❌ Error: Could not find sing-box-v3 binary!"
+            echo "❌ Error: Could not download sing-box-v3!"
             exit 1
           fi
-          
+
           # 下载 sing-box test版本（用于生成 v4 版 srs）
           echo "📦 Downloading sing-box-test..."
           curl -o ./tools/sing-box-v4 -L "https://github.com/DustinWin/proxy-tools/releases/download/sing-box/sing-box-ref1nd-test-linux-amd64-v3.upx"
-          if[ -f "./tools/sing-box-v4" ]; then
+          if [ -f "./tools/sing-box-v4" ]; then
             chmod +x ./tools/sing-box-v4
             echo "✅ sing-box-v4 ready"
           else
-            echo "❌ Error: Could not find sing-box-v4 binary!"
+            echo "❌ Error: Could not download sing-box-v4!"
             exit 1
           fi
-          
+
           # 下载 mihomo（用于生成 mrs）
           echo "📦 Downloading mihomo..."
           curl -o ./tools/mihomo -L "https://github.com/DustinWin/proxy-tools/releases/download/mihomo/mihomo-meta-linux-amd64-v3.upx"
@@ -52,10 +52,10 @@ jobs:
             chmod +x ./tools/mihomo
             echo "✅ mihomo ready"
           else
-            echo "❌ Error: Could not find mihomo binary!"
+            echo "❌ Error: Could not download mihomo!"
             exit 1
           fi
-          
+
           echo "📂 Tools directory:"
           ls -la ./tools/
 
@@ -92,29 +92,29 @@ jobs:
       - name: Generate mihomo mrs
         run: |
           mkdir -p ./mihomo-ruleset/
-          
+
           for json_file in ./rules/*.json; do
-            if[ -f "$json_file" ]; then
+            if [ -f "$json_file" ]; then
               filename=$(basename "$json_file" .json)
               echo "Processing: ${filename}"
-              
+
               temp_yaml="temp_${filename}.yaml"
               echo "payload:" > "$temp_yaml"
-              
+
               # 检查是否包含 IP 规则
               has_ip=$(jq -r '.rules[]?.ip_cidr[]? // empty' "$json_file" 2>/dev/null | head -1)
-              
+
               if [ -n "$has_ip" ]; then
                 # IP 规则 - 使用进程替换避免子 shell 问题
                 while IFS= read -r line; do
                   [[ -n "$line" ]] && echo "  - '$line'" >> "$temp_yaml"
                 done < <(jq -r '.rules[].ip_cidr[]? // empty' "$json_file")
-                
+
                 while IFS= read -r line; do
                   [[ -n "$line" ]] && echo "  - '$line'" >> "$temp_yaml"
                 done < <(jq -r '.rules[].ip_cidr6[]? // empty' "$json_file")
-                
-                if[ $(wc -l < "$temp_yaml") -gt 1 ]; then
+
+                if [ $(wc -l < "$temp_yaml") -gt 1 ]; then
                   ./tools/mihomo convert-ruleset ipcidr yaml "$temp_yaml" "./mihomo-ruleset/${filename}.mrs"
                   echo "✅ [MRS-IP] ${filename}.mrs"
                 fi
@@ -123,19 +123,19 @@ jobs:
                 while IFS= read -r line; do
                   [[ -n "$line" ]] && echo "  - '+.$line'" >> "$temp_yaml"
                 done < <(jq -r '.rules[].domain_suffix[]? // empty' "$json_file")
-                
+
                 while IFS= read -r line; do
                   [[ -n "$line" ]] && echo "  - '$line'" >> "$temp_yaml"
                 done < <(jq -r '.rules[].domain[]? // empty' "$json_file")
-                
+
                 while IFS= read -r line; do
                   [[ -n "$line" ]] && echo "  - 'DOMAIN-KEYWORD,$line'" >> "$temp_yaml"
                 done < <(jq -r '.rules[].domain_keyword[]? // empty' "$json_file")
-                
+
                 while IFS= read -r line; do
                   [[ -n "$line" ]] && echo "  - 'DOMAIN-REGEX,$line'" >> "$temp_yaml"
                 done < <(jq -r '.rules[].domain_regex[]? // empty' "$json_file")
-                
+
                 if [ $(wc -l < "$temp_yaml") -gt 1 ]; then
                   ./tools/mihomo convert-ruleset domain yaml "$temp_yaml" "./mihomo-ruleset/${filename}.mrs"
                   echo "✅ [MRS-Domain] ${filename}.mrs"
@@ -143,11 +143,11 @@ jobs:
                   echo "⚠️ [MRS] Skipped empty ruleset: ${filename}"
                 fi
               fi
-              
+
               rm -f "$temp_yaml"
             fi
           done
-          
+
           echo "Generated mrs files:"
           ls -la ./mihomo-ruleset/
 

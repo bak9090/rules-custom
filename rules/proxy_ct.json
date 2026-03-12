@@ -3,7 +3,8 @@
   "rules": [
     {
       "domain_suffix": [
-        "ax3600.com",
+        "ax3600.mi",
+        "be7000.mi",
         "tampermonkey.net",
         "userscript.zone",
         "openuserjs.org",

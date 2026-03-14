@@ -3,10 +3,13 @@
   "rules": [
     {
       "domain_suffix": [
-        "vicp.net",
+        "f3322.net",
         "x3322.net",
+        "vicp.net",
         "oicp.net",
         "xicp.net",
+        "dpdns.org",
+        "qzz.io",
         "pianyuan.org",
         "netlify.app",
         "smartisan.com",
@@ -23,8 +26,6 @@
         "mao.fan",
         "nav.eooce.com",
         "dustinwin.us.kg",
-        "qzz.io",
-        "dpdns.org"
       ]
     }
   ]

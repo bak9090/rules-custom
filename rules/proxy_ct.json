@@ -3,7 +3,6 @@
   "rules": [
     {
       "domain_suffix": [
-        "ax3600.com",
         "tampermonkey.net",
         "userscript.zone",
         "openuserjs.org",
@@ -68,7 +67,8 @@
         "asuswrt-merlin.net",
         "similarweb.com",
         "freedom.gov",
-        "railway.com"
+        "railway.com",
+        "yama.lu"
       ]
     }
   ]

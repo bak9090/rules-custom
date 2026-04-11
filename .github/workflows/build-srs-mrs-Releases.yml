@@ -160,7 +160,7 @@ jobs:
           overwrite: true
           body: |
             [sing-box 内核](https://github.com/SagerNet/sing-box) rule_set 规则集文件
-            适用于 v1.11.0 - v1.13.0（不包含）系列版本的 sing-box 内核（`"version": 3`）
+            适用于 v1.11.x - v1.12.x 系列版本的 sing-box 内核（`"version": 3`）
             规则集文件更新于 ${{ env.update_version }}
           file_glob: true
           file: ./sing-box-ruleset-v3/*
@@ -185,7 +185,7 @@ jobs:
           overwrite: true
           body: |
             [sing-box 内核](https://github.com/SagerNet/sing-box) rule_set 规则集文件
-            适用于 v1.13.0 系列版本的 sing-box 内核（`"version": 4`）
+            适用于 v1.13.x+ 系列版本的 sing-box 内核（`"version": 4`）
             规则集文件更新于 ${{ env.update_version }}
           file_glob: true
           file: ./sing-box-ruleset-v4/*

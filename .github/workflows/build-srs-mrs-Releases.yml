@@ -14,6 +14,11 @@ jobs:
       - name: Set variables
         run: |
           echo "update_version=$(date -d '+8 hours' +%Y-%m-%d)" >> ${GITHUB_ENV}
+          echo "singbox_core_release_version=$(curl -sSL https://api.github.com/repos/reF1nd/sing-box/tags | jq -r '.[] | select(.name | contains("reF1nd") and (contains("alpha") | not)) | .name' | head -n 1 | awk -F'[v.-]' '{print $2"."$3".0"}')" >> ${GITHUB_ENV}
+          echo "singbox_core_latest_version=$(curl -sSL https://raw.githubusercontent.com/reF1nd/sing-box/reF1nd-testing/docs/configuration/rule-set/source-format.md | awk '/*/ {last=$0} END {print last}' | sed -n 's/.*\([0-9]\+\.[0-9]\+\.[0-9]\+\).*/\1/p')" >> ${GITHUB_ENV}
+          echo "singbox_core_compatible_version=$(curl -sSL https://raw.githubusercontent.com/reF1nd/sing-box/reF1nd-testing/docs/configuration/rule-set/source-format.md | awk '/*/{lines[++count]=$0} END{print lines[count-1]}' | sed -n 's/.*\([0-9]\+\.[0-9]\+\.[0-9]\+\).*/\1/p')" >> ${GITHUB_ENV}
+          echo "singbox_rules_latest_version=$(curl -sSL https://raw.githubusercontent.com/reF1nd/sing-box/reF1nd-testing/docs/configuration/rule-set/source-format.md | awk '/*/ {last=$0} END {print last}' | sed -n 's/^* \([0-9]\+\):.*/\1/p')" >> ${GITHUB_ENV}
+          echo "singbox_rules_compatible_version=$(curl -sSL https://raw.githubusercontent.com/reF1nd/sing-box/reF1nd-testing/docs/configuration/rule-set/source-format.md | awk '/*/{lines[++count]=$0} END{print lines[count-1]}' | sed -n 's/^* \([0-9]\+\):.*/\1/p')" >> ${GITHUB_ENV}
         shell: bash
 
       - name: Clone Repository
@@ -23,29 +28,26 @@ jobs:
         run: |
           mkdir -p ./tools/
 
-          # 下载 sing-box stable版本（用于生成 v3 版 srs）
           echo "📦 Downloading sing-box-stable..."
-          curl -o ./tools/sing-box-v3 -L "https://github.com/DustinWin/proxy-tools/releases/download/sing-box/sing-box-ref1nd-stable-linux-amd64-v3.upx"
-          if [ -f "./tools/sing-box-v3" ]; then
-            chmod +x ./tools/sing-box-v3
-            echo "✅ sing-box-v3 ready"
+          curl -o ./tools/sing-box-compatible -L "https://github.com/DustinWin/proxy-tools/releases/download/sing-box/sing-box-ref1nd-stable-linux-amd64-v3.upx"
+          if [ -f "./tools/sing-box-compatible" ]; then
+            chmod +x ./tools/sing-box-compatible
+            echo "✅ sing-box-compatible ready"
           else
-            echo "❌ Error: Could not download sing-box-v3!"
+            echo "❌ Error: Could not download sing-box-compatible!"
             exit 1
           fi
 
-          # 下载 sing-box test版本（用于生成 v4 版 srs）
           echo "📦 Downloading sing-box-test..."
-          curl -o ./tools/sing-box-v4 -L "https://github.com/DustinWin/proxy-tools/releases/download/sing-box/sing-box-ref1nd-test-linux-amd64-v3.upx"
-          if [ -f "./tools/sing-box-v4" ]; then
-            chmod +x ./tools/sing-box-v4
-            echo "✅ sing-box-v4 ready"
+          curl -o ./tools/sing-box-latest -L "https://github.com/DustinWin/proxy-tools/releases/download/sing-box/sing-box-ref1nd-test-linux-amd64-v3.upx"
+          if [ -f "./tools/sing-box-latest" ]; then
+            chmod +x ./tools/sing-box-latest
+            echo "✅ sing-box-latest ready"
           else
-            echo "❌ Error: Could not download sing-box-v4!"
+            echo "❌ Error: Could not download sing-box-latest!"
             exit 1
           fi
 
-          # 下载 mihomo（用于生成 mrs）
           echo "📦 Downloading mihomo..."
           curl -o ./tools/mihomo -L "https://github.com/DustinWin/proxy-tools/releases/download/mihomo/mihomo-meta-linux-amd64-v3.upx"
           if [ -f "./tools/mihomo" ]; then
@@ -59,35 +61,35 @@ jobs:
           echo "📂 Tools directory:"
           ls -la ./tools/
 
-      - name: Generate sing-box srs v3 (compatible version)
+      - name: Generate sing-box srs compatible
         run: |
-          mkdir -p ./sing-box-ruleset-v3/
+          mkdir -p ./sing-box-ruleset-compatible/
           for json_file in ./rules/*.json; do
             if [ -f "$json_file" ]; then
               filename=$(basename "$json_file" .json)
               echo "Processing: ${filename}"
-              jq '.version = 3' "$json_file" > "./sing-box-ruleset-v3/${filename}.json"
-              ./tools/sing-box-v3 rule-set compile "./sing-box-ruleset-v3/${filename}.json" -o "./sing-box-ruleset-v3/${filename}.srs"
-              echo "✅ [v3] ${filename}.srs"
+              jq '.version = ${{ env.singbox_rules_compatible_version }}' "$json_file" > "./sing-box-ruleset-compatible/${filename}.json"
+              ./tools/sing-box-compatible rule-set compile "./sing-box-ruleset-compatible/${filename}.json" -o "./sing-box-ruleset-compatible/${filename}.srs"
+              echo "✅ [compatible] ${filename}.srs"
             fi
           done
-          echo "Generated v3 files:"
-          ls -la ./sing-box-ruleset-v3/
+          echo "Generated compatible files:"
+          ls -la ./sing-box-ruleset-compatible/
 
-      - name: Generate sing-box srs v4 (latest version)
+      - name: Generate sing-box srs latest
         run: |
-          mkdir -p ./sing-box-ruleset-v4/
+          mkdir -p ./sing-box-ruleset/
           for json_file in ./rules/*.json; do
             if [ -f "$json_file" ]; then
               filename=$(basename "$json_file" .json)
               echo "Processing: ${filename}"
-              jq '.version = 4' "$json_file" > "./sing-box-ruleset-v4/${filename}.json"
-              ./tools/sing-box-v4 rule-set compile "./sing-box-ruleset-v4/${filename}.json" -o "./sing-box-ruleset-v4/${filename}.srs"
-              echo "✅ [v4] ${filename}.srs"
+              jq '.version = ${{ env.singbox_rules_latest_version }}' "$json_file" > "./sing-box-ruleset/${filename}.json"
+              ./tools/sing-box-latest rule-set compile "./sing-box-ruleset/${filename}.json" -o "./sing-box-ruleset/${filename}.srs"
+              echo "✅ [latest] ${filename}.srs"
             fi
           done
-          echo "Generated v4 files:"
-          ls -la ./sing-box-ruleset-v4/
+          echo "Generated latest files:"
+          ls -la ./sing-box-ruleset/
 
       - name: Generate mihomo mrs
         run: |
@@ -101,11 +103,9 @@ jobs:
               temp_yaml="temp_${filename}.yaml"
               echo "payload:" > "$temp_yaml"
 
-              # 检查是否包含 IP 规则
               has_ip=$(jq -r '.rules[]?.ip_cidr[]? // empty' "$json_file" 2>/dev/null | head -1)
 
               if [ -n "$has_ip" ]; then
-                # IP 规则 - 使用进程替换避免子 shell 问题
                 while IFS= read -r line; do
                   [[ -n "$line" ]] && echo "  - '$line'" >> "$temp_yaml"
                 done < <(jq -r '.rules[].ip_cidr[]? // empty' "$json_file")
@@ -119,7 +119,6 @@ jobs:
                   echo "✅ [MRS-IP] ${filename}.mrs"
                 fi
               else
-                # 域名规则 - 使用进程替换避免子 shell 问题
                 while IFS= read -r line; do
                   [[ -n "$line" ]] && echo "  - '+.$line'" >> "$temp_yaml"
                 done < <(jq -r '.rules[].domain_suffix[]? // empty' "$json_file")
@@ -151,7 +150,7 @@ jobs:
           echo "Generated mrs files:"
           ls -la ./mihomo-ruleset/
 
-      - name: Release and upload `sing-box-ruleset-v3` assets
+      - name: Release and upload `sing-box-ruleset-compatible` assets
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
@@ -160,14 +159,14 @@ jobs:
           overwrite: true
           body: |
             [sing-box 内核](https://github.com/SagerNet/sing-box) rule_set 规则集文件
-            适用于 v1.11.x - v1.12.x 系列版本的 sing-box 内核（`"version": 3`）
+            适用于 v${{ env.singbox_core_compatible_version }}-v${{ env.singbox_core_latest_version }}（不包含）系列版本的 sing-box 内核（`"version": ${{ env.singbox_rules_compatible_version }}`）
             规则集文件更新于 ${{ env.update_version }}
           file_glob: true
-          file: ./sing-box-ruleset-v3/*
+          file: ./sing-box-ruleset-compatible/*
 
       - name: Commit and push `sing-box-ruleset-compatible` branch
         run: |
-          cd ./sing-box-ruleset-v3/ || exit 1
+          cd ./sing-box-ruleset-compatible/ || exit 1
           git init
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
@@ -185,14 +184,14 @@ jobs:
           overwrite: true
           body: |
             [sing-box 内核](https://github.com/SagerNet/sing-box) rule_set 规则集文件
-            适用于 v1.13.x+ 系列版本的 sing-box 内核（`"version": 4`）
+            适用于 v${{ env.singbox_core_latest_version }} 系列版本的 sing-box 内核（`"version": ${{ env.singbox_rules_latest_version }}`）
             规则集文件更新于 ${{ env.update_version }}
           file_glob: true
-          file: ./sing-box-ruleset-v4/*
+          file: ./sing-box-ruleset/*
 
       - name: Commit and push `sing-box-ruleset` branch
         run: |
-          cd ./sing-box-ruleset-v4/ || exit 1
+          cd ./sing-box-ruleset/ || exit 1
           git init
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
@@ -227,11 +226,11 @@ jobs:
 
       - name: Purge jsDelivr CDN
         run: |
-          cd ./sing-box-ruleset-v3/ || exit 1
+          cd ./sing-box-ruleset-compatible/ || exit 1
           for file in $(ls); do
             curl -i "https://purge.jsdelivr.net/gh/${{ github.repository }}@sing-box-ruleset-compatible/${file}"
           done
-          cd ../sing-box-ruleset-v4/ || exit 1
+          cd ../sing-box-ruleset/ || exit 1
           for file in $(ls); do
             curl -i "https://purge.jsdelivr.net/gh/${{ github.repository }}@sing-box-ruleset/${file}"
           done

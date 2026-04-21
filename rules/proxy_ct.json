@@ -3,7 +3,6 @@
   "rules": [
     {
       "domain_suffix": [
-        "dpdns.org",
         "tampermonkey.net",
         "userscript.zone",
         "openuserjs.org",

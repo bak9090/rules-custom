@@ -1,0 +1,29 @@
+{
+  "version": 5,
+  "rules": [
+    {
+      "domain_suffix": [
+        "f3322.net",
+        "x3322.net",
+        "oicp.net",
+        "vicp.net",
+        "xicp.net",
+        "pianyuan.org",
+        "smartisan.com",
+        "snote.ink",
+        "oray.com",
+        "yinfans.net",
+        "cnmkv.com",
+        "deepseek.com",
+        "xitongzhijia.net",
+        "ali213.net",
+        "ysjf.com",
+        "mediastory.cc",
+        "feishu.cn",
+        "gitlab.com",
+        "mao.fan",
+        "guitarschina.com"
+      ]
+    }
+  ]
+}

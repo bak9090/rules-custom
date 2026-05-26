@@ -39,7 +39,7 @@ jobs:
           fi
 
           echo "📦 Downloading sing-box-test..."
-          curl -o ./tools/sing-box-latest -L "https://github.com/DustinWin/proxy-tools/releases/download/sing-box/sing-box-ref1nd-test-linux-amd64-v3.upx"
+          curl -o ./tools/sing-box-latest -L "https://github.com/DustinWin/proxy-tools/releases/download/sing-box/sing-box-ref1nd-testing-linux-amd64-v3.upx"
           if [ -f "./tools/sing-box-latest" ]; then
             chmod +x ./tools/sing-box-latest
             echo "✅ sing-box-latest ready"

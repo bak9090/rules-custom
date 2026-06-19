@@ -22,7 +22,7 @@ jobs:
         shell: bash
 
       - name: Clone Repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Setup Tools
         run: |
